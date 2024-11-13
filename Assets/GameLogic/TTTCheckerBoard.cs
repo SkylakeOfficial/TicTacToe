@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using Unity.Mathematics;
 using UnityEngine.Serialization;
 
 public class TTTCheckerBoard : MonoBehaviour
@@ -187,7 +188,8 @@ public class TTTCheckerBoard : MonoBehaviour
 
         bool Score4()
         {
-            int[] scoreVSCount = { 0, 10, 100, 1000, 10000 };
+            score = 0;
+            int[] scoreVSCount = { 0, 10, 100, 1000, 100000 };
             foreach (var grid in _board)
             {
                 int[][] lines =
@@ -197,10 +199,11 @@ public class TTTCheckerBoard : MonoBehaviour
                     new[] { grid, GetGridSafe(1, 0), GetGridSafe(2, 0), GetGridSafe(3, 0) },
                     new[] { grid, GetGridSafe(0, 1), GetGridSafe(0, 2), GetGridSafe(0, 3) }
                 };
-                score = 0;
                 foreach (var line in lines)
                 {
+                    var thisLineScore = 0;
                     var selfCount = 0;
+                    var opCount = 0;
                     for (int i = 0; i < line.Length; i++)
                     {
                         if (line[i] == TTTGameMode.Instance.activePlayer.index)
@@ -209,9 +212,15 @@ public class TTTCheckerBoard : MonoBehaviour
                         }
                         else if (line[i] == -2)
                         {
+                            continue;
+                        }
+                        else
+                        {
+                            opCount++;
                         }
                     }
-                    score += scoreVSCount[selfCount];
+
+                    score += scoreVSCount[selfCount] - scoreVSCount[opCount];
                 }
             }
 
@@ -220,36 +229,39 @@ public class TTTCheckerBoard : MonoBehaviour
 
         bool Score5()
         {
-            int[] scoreVSCount = { 0, 10, 100, 1000, 10000, 100000 };
-            int self = _playerid;
-            int[][] lines =
-            {
-                new[] { GetGridSafe(-2, -2), GetGridSafe(-1, -1), self, GetGridSafe(1, 1), GetGridSafe(2, 2) },
-                new[] { GetGridSafe(2, -2), GetGridSafe(1, -1), self, GetGridSafe(-1, 1), GetGridSafe(-2, 2) },
-                new[] { GetGridSafe(-2, 0), GetGridSafe(-1, 0), self, GetGridSafe(1, 0), GetGridSafe(2, 0) },
-                new[] { GetGridSafe(0, -2), GetGridSafe(0, -1), self, GetGridSafe(0, 1), GetGridSafe(0, 2) }
-            };
             score = 0;
-            foreach (var line in lines)
+            int[] scoreVSCount = { 0, 10, 100, 1000, 10000, 100000 };
+            foreach (var grid in _board)
             {
-                foreach (var player in _players)
+                int[][] lines =
                 {
-                    int scoreOfPlayer = 0;
+                    new[] { grid, GetGridSafe(1, 1), GetGridSafe(2, 2), GetGridSafe(3, 3), GetGridSafe(4, 4) },
+                    new[] { grid, GetGridSafe(-1, 1), GetGridSafe(-2, 2), GetGridSafe(-3, 3), GetGridSafe(-4, 4) },
+                    new[] { grid, GetGridSafe(1, 0), GetGridSafe(2, 0), GetGridSafe(3, 0), GetGridSafe(4, 0) },
+                    new[] { grid, GetGridSafe(0, 1), GetGridSafe(0, 2), GetGridSafe(0, 3), GetGridSafe(0, 4) }
+                };
+                foreach (var line in lines)
+                {
+                    var thisLineScore = 0;
                     var selfCount = 0;
+                    var opCount = 0;
                     for (int i = 0; i < line.Length; i++)
                     {
-                        if (line[i] == self)
+                        if (line[i] == TTTGameMode.Instance.activePlayer.index)
                         {
                             selfCount++;
                         }
                         else if (line[i] == -2)
                         {
-                            scoreOfPlayer -= 100;
+                            continue;
+                        }
+                        else
+                        {
+                            opCount++;
                         }
                     }
 
-                    scoreOfPlayer += scoreVSCount[selfCount];
-                    score += player == _player ? scoreOfPlayer : -scoreOfPlayer;
+                    score += scoreVSCount[selfCount] - scoreVSCount[opCount];
                 }
             }
 
@@ -563,6 +575,14 @@ public class TTTCheckerBoard : MonoBehaviour
                 }
             }
         }
+        //shuffle
+        for (int i = 0; i < _spared.Count; i++)
+        {
+            var tmp = _spared[i];
+            var r = UnityEngine.Random.Range(i, _spared.Count);
+            _spared[i] = _spared[r];
+            _spared[r] = tmp;
+        }
 
         GameNode bestNode = null;
         for (int i = 0; i < _spared.Count; i++)
@@ -577,7 +597,7 @@ public class TTTCheckerBoard : MonoBehaviour
                 bestNode = node.score > bestNode.score ? node : bestNode;
             }
 
-            Debug.Log(node._thisgrid.ToString() + node.score);
+            //  Debug.Log(node._thisgrid.ToString() + node.score);
         }
 
         System.Diagnostics.Debug.Assert(bestNode != null, nameof(bestNode) + " != null");
